@@ -107,6 +107,16 @@
       color: #d9534f;
       min-height: 30px;
     }
+    .danger-btn {
+      margin-top: 40px;
+      background-color: #dc3545;
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -134,6 +144,8 @@
   <div id="timerLabel"></div>
   <div id="deckGrid" class="deck-grid"></div>
   <button id="lockBtn" onclick="lockAndTimer()" class="btn" disabled>Lock Selections</button>
+
+  <button onclick="emergencyReset()" class="danger-btn">⚠️ Emergency Reset Game Data</button>
 
   <script>
     let userPoints = parseInt(localStorage.getItem('androidPoints') || '100');
@@ -204,6 +216,16 @@
       userPoints = 20;
       localStorage.setItem('androidPoints', userPoints.toString());
       localStorage.removeItem('passExpires');
+      checkPass();
+    }
+
+    function emergencyReset() {
+      localStorage.clear();
+      userPoints = 100;
+      losses = 0;
+      localStorage.setItem('androidPoints', '100');
+      localStorage.setItem('androidLosses', '0');
+      alert("🔄 Storage successfully wiped clean! Points reset to 100.");
       checkPass();
     }
 
