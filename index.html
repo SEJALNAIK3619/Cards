@@ -1,0 +1,51 @@
+<div id="deckGrid" class="deck-grid"></div>
+  <button id="lockBtn" onclick="lockAndTimer()" class="btn" disabled>Lock Selections</button>
+  <script>
+    let userPoints = parseInt(localStorage.getItem('androidPoints') || '100');
+    let losses = parseInt(localStorage.getItem('androidLosses') || '0');
+    let selectedCards = []; let timerInterval;
+    function checkPass() {
+      const exp = localStorage.getItem('passExpires');
+      if (exp && Date.now() < parseInt(exp)) { document.getElementById('paymentGate').style.display = 'none'; buildDeck(); }
+      else { document.getElementById('paymentGate').style.display = 'flex'; }
+      updateUI();
+    }
+    function unlockAccess() {
+      if (userPoints < 10) { alert("Insufficient points!"); return; }
+      userPoints -= 10; localStorage.setItem('passExpires', (Date.now() + 172800000).toString());
+      document.getElementById('paymentGate').style.display = 'none'; buildDeck(); updateUI();
+    }
+    function buildDeck() {
+      const suits = ['♠️', '♥️', '♦️', '♣️']; const grid = document.getElementById('deckGrid'); grid.innerHTML = '';
+      selectedCards = []; document.getElementById('lockBtn').disabled = true;
+      suits.forEach(suit => { for (let v = 1; v <= 13; v++) {
+        const slot = document.createElement('div'); slot.className = 'card-slot'; slot.innerText = `${v}${suit}`;
+        slot.dataset.id = `${suit}-${v}`; slot.onclick = () => {
+          if (slot.classList.contains('selected') || selectedCards.length >= 2) return;
+          slot.classList.add('selected'); selectedCards.push(slot.dataset.id);
+          if (selectedCards.length === 2) document.getElementById('lockBtn').disabled = false;
+        }; grid.appendChild(slot);
+      }});
+    }
+    function lockAndTimer() {
+      document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); document.getElementById('lockBtn').disabled = true;
+      let secs = 3600; clearInterval(timerInterval);
+      timerInterval = setInterval(() => { secs--;
+        let h = String(Math.floor(secs / 3600)).padStart(2, '0'), m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0'), s = String(secs % 60).padStart(2, '0');
+        document.getElementById('timerLabel').innerText = `${h}:${m}:${s}`;
+        if (secs <= 0) { clearInterval(timerInterval); drawResult(); }
+      }, 1000);
+    }
+    function drawResult() {
+      const win = Math.random() >= 0.5;
+      if (win) { losses = 0; userPoints += 50; alert("🟢 GREEN! +50 Points."); }
+      else { losses++; alert(`🔴 RED! Streak: ${losses}/10`); if (losses >= 10) { userPoints = 0; losses = 0; alert("🚨 10 Red streak! Points cleared."); } }
+      localStorage.setItem('androidPoints', userPoints.toString()); localStorage.setItem('androidLosses', losses.toString());
+      if (userPoints >= 100) alert("💰 Virtual withdrawal of 100+ points available!");
+      checkPass();
+    }
+    function updateUI() { document.getElementById('pointsLabel').innerText = userPoints; document.getElementById('streakLabel').innerText = losses; }
+    window.onload = checkPass;
+  </script>
+</body>
+</html>
