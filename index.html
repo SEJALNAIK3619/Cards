@@ -53,6 +53,10 @@
       user-select: none;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+    /* Dynamic Red Suit Styling */
+    .card-slot.red-suit {
+      color: #d9534f;
+    }
     .card-slot.selected {
       background: #e0f7fa;
       border-color: #00acc1;
@@ -77,6 +81,7 @@
       font-weight: bold;
       margin-top: 10px;
       color: #d9534f;
+      min-height: 30px;
     }
   </style>
 </head>
@@ -88,7 +93,7 @@
     <div>Streak: <span id="streakLabel">0</span></div>
   </div>
 
-  <!-- Missing Payment Gate UI Element -->
+  <!-- Payment Gate UI Element -->
   <div id="paymentGate">
     <p>Access requires a temporary pass.</p>
     <button onclick="unlockAccess()" class="btn">Unlock Pass (10 Points)</button>
@@ -113,10 +118,13 @@
       if (exp && Date.now() < parseInt(exp)) { 
         document.getElementById('paymentGate').style.display = 'none'; 
         buildDeck(); 
+        restoreTimer(); // Check if a countdown was already running
       }
       else { 
         document.getElementById('paymentGate').style.display = 'flex'; 
         document.getElementById('deckGrid').innerHTML = '';
+        clearInterval(timerInterval);
+        document.getElementById('timerLabel').innerText = "";
       }
       updateUI();
     }
@@ -141,6 +149,10 @@
         for (let v = 1; v <= 13; v++) {
           const slot = document.createElement('div'); 
           slot.className = 'card-slot'; 
+          // Highlight hearts and diamonds in red
+          if (suit === '♥️' || suit === '♦️') {
+            slot.classList.add('red-suit');
+          }
           slot.innerText = `${v}${suit}`;
           slot.dataset.id = `${suit}-${v}`; 
           slot.onclick = () => {
@@ -159,16 +171,45 @@
     function lockAndTimer() {
       document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); 
       document.getElementById('lockBtn').disabled = true;
-      let secs = 3600; 
+      
+      // Persist the target time 1 hour into the future
+      const targetTime = Date.now() + 3600000;
+      localStorage.setItem('timerTarget', targetTime.toString());
+      
+      startCountdown(targetTime);
+    }
+
+    function startCountdown(targetTime) {
       clearInterval(timerInterval);
-      timerInterval = setInterval(() => { 
-        secs--;
-        let h = String(Math.floor(secs / 3600)).padStart(2, '0');
-        let m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
-        let s = String(secs % 60).padStart(2, '0');
+      timerInterval = setInterval(() => {
+        let remaining = Math.max(0, Math.floor((targetTime - Date.now()) / 1000));
+        
+        let h = String(Math.floor(remaining / 3600)).padStart(2, '0');
+        let m = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0');
+        let s = String(remaining % 60).padStart(2, '0');
         document.getElementById('timerLabel').innerText = `${h}:${m}:${s}`;
-        if (secs <= 0) { clearInterval(timerInterval); drawResult(); }
+        
+        if (remaining <= 0) { 
+          clearInterval(timerInterval); 
+          localStorage.removeItem('timerTarget');
+          drawResult(); 
+        }
       }, 1000);
+    }
+
+    function restoreTimer() {
+      const savedTarget = localStorage.getItem('timerTarget');
+      if (savedTarget) {
+        const targetTime = parseInt(savedTarget);
+        if (Date.now() < targetTime) {
+          // Lock down the grid options immediately if timer is active
+          document.querySelectorAll('.card-slot').forEach(s => s.onclick = null);
+          document.getElementById('lockBtn').disabled = true;
+          startCountdown(targetTime);
+        } else {
+          localStorage.removeItem('timerTarget');
+        }
+      }
     }
 
     function drawResult() {
@@ -197,7 +238,6 @@
 
     window.onload = checkPass;
 
-    // Service Worker Registration
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
