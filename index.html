@@ -24,7 +24,7 @@
       font-size: 16px;
     }
     #installContainer {
-      display: none; /* Hidden by default, shown only if installable */
+      display: none;
       margin-bottom: 15px;
     }
     .install-btn {
@@ -101,7 +101,6 @@
 </head>
 <body>
 
-  <!-- PWA Install Banner Context -->
   <div id="installContainer">
     <button id="btnInstall" class="install-btn">📲 Install App to Home Screen</button>
   </div>
@@ -113,7 +112,8 @@
 
   <div id="paymentGate">
     <p>Access requires a temporary pass.</p>
-    <button onclick="unlockAccess()" class="btn">Unlock Pass (10 Points)</button>
+    <!-- Visual check updated to show 20 points -->
+    <button onclick="unlockAccess()" class="btn">Unlock Pass (20 Points)</button>
   </div>
 
   <div id="timerLabel"></div>
@@ -126,7 +126,6 @@
     let selectedCards = []; let timerInterval;
     let deferredPrompt;
 
-    // Handle PWA Installation Mechanics
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
@@ -137,9 +136,6 @@
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      }
       deferredPrompt = null;
       document.getElementById('installContainer').style.display = 'none';
     });
@@ -167,8 +163,9 @@
     }
 
     function unlockAccess() {
-      if (userPoints < 10) { alert("Insufficient points!"); return; }
-      userPoints -= 10; 
+      // Fee updated from 10 points to 20 points
+      if (userPoints < 20) { alert("Insufficient points!"); return; }
+      userPoints -= 20; 
       localStorage.setItem('androidPoints', userPoints.toString()); 
       localStorage.setItem('passExpires', (Date.now() + 172800000).toString());
       document.getElementById('paymentGate').style.display = 'none'; 
@@ -209,7 +206,8 @@
       document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); 
       document.getElementById('lockBtn').disabled = true;
       
-      const targetTime = Date.now() + 3600000;
+      // Timer limit updated from 1 hour (3600000ms) to 5 minutes (300000ms)
+      const targetTime = Date.now() + 300000;
       localStorage.setItem('timerTarget', targetTime.toString());
       
       startCountdown(targetTime);
