@@ -123,7 +123,7 @@
   <div id="withdrawalMenu">
     <p style="color: #137333; font-weight: bold;">💰 Virtual Withdrawal Milestone Ready!</p>
     <p>Your point threshold balance has hit 100+ points.</p>
-    <button onclick="processPointsClaim()" class="btn w-btn">Claim & Add +100 Points</button>
+    <button onclick="processPointsClaim()" class="btn w-btn">Claim Reward & Restart Game</button>
   </div>
 
   <div id="paymentGate">
@@ -200,9 +200,10 @@
     }
 
     function processPointsClaim() {
-      userPoints += 100;
+      alert("💰 Success! +100 Points Milestone Claimed.");
+      userPoints = 20;
       localStorage.setItem('androidPoints', userPoints.toString());
-      alert("💰 Success! +100 Points added directly to your account balance.");
+      localStorage.removeItem('passExpires');
       checkPass();
     }
 
@@ -300,6 +301,7 @@
 
       if (win) { 
         losses = 0; 
+        userPoints = 100;
         alert("🟢 GREEN! Milestone hit."); 
       }
       else { 
@@ -331,4 +333,4 @@
     }
   </script>
 </body>
-  </html>
+</html>
