@@ -23,6 +23,21 @@
       font-weight: bold;
       font-size: 16px;
     }
+    #installContainer {
+      display: none; /* Hidden by default, shown only if installable */
+      margin-bottom: 15px;
+    }
+    .install-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
     #paymentGate {
       display: none;
       flex-direction: column;
@@ -86,6 +101,11 @@
 </head>
 <body>
 
+  <!-- PWA Install Banner Context -->
+  <div id="installContainer">
+    <button id="btnInstall" class="install-btn">📲 Install App to Home Screen</button>
+  </div>
+
   <div class="status-bar">
     <div>Points: <span id="pointsLabel">100</span></div>
     <div>Streak: <span id="streakLabel">0</span></div>
@@ -104,6 +124,31 @@
     let userPoints = parseInt(localStorage.getItem('androidPoints') || '100');
     let losses = parseInt(localStorage.getItem('androidLosses') || '0');
     let selectedCards = []; let timerInterval;
+    let deferredPrompt;
+
+    // Handle PWA Installation Mechanics
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('installContainer').style.display = 'block';
+    });
+
+    document.getElementById('btnInstall').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      }
+      deferredPrompt = null;
+      document.getElementById('installContainer').style.display = 'none';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      document.getElementById('installContainer').style.display = 'none';
+      deferredPrompt = null;
+      alert("🎉 App successfully installed to your home screen!");
+    });
 
     function checkPass() {
       const exp = localStorage.getItem('passExpires');
@@ -124,11 +169,8 @@
     function unlockAccess() {
       if (userPoints < 10) { alert("Insufficient points!"); return; }
       userPoints -= 10; 
-      
-      // Save state to fix the refresh bug
       localStorage.setItem('androidPoints', userPoints.toString()); 
       localStorage.setItem('passExpires', (Date.now() + 172800000).toString());
-      
       document.getElementById('paymentGate').style.display = 'none'; 
       buildDeck(); 
       updateUI();
