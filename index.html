@@ -1,73 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  
-
-
-
-
-<!-- Link the Web Manifest -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Register the Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker registered successfully!', reg.scope))
-        .catch(err => console.log('Service Worker registration failed:', err));
-    });
-  }
-</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Points Card Game</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .status-bar {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    #paymentGate {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .deck-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 400px;
+      width: 100%;
+      margin-bottom: 25px;
+    }
+    .card-slot {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 12px 4px;
+      text-align: center;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .card-slot.selected {
+      background: #e0f7fa;
+      border-color: #00acc1;
+      font-weight: bold;
+    }
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    #timerLabel {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 10px;
+      color: #d9534f;
+    }
+  </style>
 </head>
-<div id="deckGrid" class="deck-grid"></div>
+<body>
+
+  <!-- Top Info Display -->
+  <div class="status-bar">
+    <div>Points: <span id="pointsLabel">100</span></div>
+    <div>Streak: <span id="streakLabel">0</span></div>
+  </div>
+
+  <!-- Missing Payment Gate UI Element -->
+  <div id="paymentGate">
+    <p>Access requires a temporary pass.</p>
+    <button onclick="unlockAccess()" class="btn">Unlock Pass (10 Points)</button>
+  </div>
+
+  <!-- Timer Label for Lock Countdowns -->
+  <div id="timerLabel"></div>
+
+  <!-- Cards Grid View -->
+  <div id="deckGrid" class="deck-grid"></div>
+
+  <!-- Selection Lock Interaction -->
   <button id="lockBtn" onclick="lockAndTimer()" class="btn" disabled>Lock Selections</button>
+
   <script>
     let userPoints = parseInt(localStorage.getItem('androidPoints') || '100');
     let losses = parseInt(localStorage.getItem('androidLosses') || '0');
     let selectedCards = []; let timerInterval;
+
     function checkPass() {
       const exp = localStorage.getItem('passExpires');
-      if (exp && Date.now() < parseInt(exp)) { document.getElementById('paymentGate').style.display = 'none'; buildDeck(); }
-      else { document.getElementById('paymentGate').style.display = 'flex'; }
+      if (exp && Date.now() < parseInt(exp)) { 
+        document.getElementById('paymentGate').style.display = 'none'; 
+        buildDeck(); 
+      }
+      else { 
+        document.getElementById('paymentGate').style.display = 'flex'; 
+        document.getElementById('deckGrid').innerHTML = '';
+      }
       updateUI();
     }
+
     function unlockAccess() {
       if (userPoints < 10) { alert("Insufficient points!"); return; }
-      userPoints -= 10; localStorage.setItem('passExpires', (Date.now() + 172800000).toString());
-      document.getElementById('paymentGate').style.display = 'none'; buildDeck(); updateUI();
+      userPoints -= 10; 
+      localStorage.setItem('passExpires', (Date.now() + 172800000).toString());
+      document.getElementById('paymentGate').style.display = 'none'; 
+      buildDeck(); 
+      updateUI();
     }
+
     function buildDeck() {
-      const suits = ['♠️', '♥️', '♦️', '♣️']; const grid = document.getElementById('deckGrid'); grid.innerHTML = '';
-      selectedCards = []; document.getElementById('lockBtn').disabled = true;
-      suits.forEach(suit => { for (let v = 1; v <= 13; v++) {
-        const slot = document.createElement('div'); slot.className = 'card-slot'; slot.innerText = `${v}${suit}`;
-        slot.dataset.id = `${suit}-${v}`; slot.onclick = () => {
-          if (slot.classList.contains('selected') || selectedCards.length >= 2) return;
-          slot.classList.add('selected'); selectedCards.push(slot.dataset.id);
-          if (selectedCards.length === 2) document.getElementById('lockBtn').disabled = false;
-        }; grid.appendChild(slot);
-      }});
+      const suits = ['♠️', '♥️', '♦️', '♣️']; 
+      const grid = document.getElementById('deckGrid'); 
+      grid.innerHTML = '';
+      selectedCards = []; 
+      document.getElementById('lockBtn').disabled = true;
+
+      suits.forEach(suit => { 
+        for (let v = 1; v <= 13; v++) {
+          const slot = document.createElement('div'); 
+          slot.className = 'card-slot'; 
+          slot.innerText = `${v}${suit}`;
+          slot.dataset.id = `${suit}-${v}`; 
+          slot.onclick = () => {
+            if (slot.classList.contains('selected')) return;
+            if (selectedCards.length >= 2) return;
+            
+            slot.classList.add('selected'); 
+            selectedCards.push(slot.dataset.id);
+            if (selectedCards.length === 2) document.getElementById('lockBtn').disabled = false;
+          }; 
+          grid.appendChild(slot);
+        }
+      });
     }
+
     function lockAndTimer() {
-      document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); document.getElementById('lockBtn').disabled = true;
-      let secs = 3600; clearInterval(timerInterval);
-      timerInterval = setInterval(() => { secs--;
-        let h = String(Math.floor(secs / 3600)).padStart(2, '0'), m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0'), s = String(secs % 60).padStart(2, '0');
+      document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); 
+      document.getElementById('lockBtn').disabled = true;
+      let secs = 3600; 
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => { 
+        secs--;
+        let h = String(Math.floor(secs / 3600)).padStart(2, '0');
+        let m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
+        let s = String(secs % 60).padStart(2, '0');
         document.getElementById('timerLabel').innerText = `${h}:${m}:${s}`;
         if (secs <= 0) { clearInterval(timerInterval); drawResult(); }
       }, 1000);
     }
+
     function drawResult() {
       const win = Math.random() >= 0.5;
-      if (win) { losses = 0; userPoints += 50; alert("🟢 GREEN! +50 Points."); }
-      else { losses++; alert(`🔴 RED! Streak: ${losses}/10`); if (losses >= 10) { userPoints = 0; losses = 0; alert("🚨 10 Red streak! Points cleared."); } }
-      localStorage.setItem('androidPoints', userPoints.toString()); localStorage.setItem('androidLosses', losses.toString());
+      if (win) { 
+        losses = 0; 
+        userPoints += 50; 
+        alert("🟢 GREEN! +50 Points."); 
+      }
+      else { 
+        losses++; 
+        alert(`🔴 RED! Streak: ${losses}/10`); 
+        if (losses >= 10) { userPoints = 0; losses = 0; alert("🚨 10 Red streak! Points cleared."); } 
+      }
+      localStorage.setItem('androidPoints', userPoints.toString()); 
+      localStorage.setItem('androidLosses', losses.toString());
       if (userPoints >= 100) alert("💰 Virtual withdrawal of 100+ points available!");
+      document.getElementById('timerLabel').innerText = "";
       checkPass();
     }
-    function updateUI() { document.getElementById('pointsLabel').innerText = userPoints; document.getElementById('streakLabel').innerText = losses; }
+
+    function updateUI() { 
+      document.getElementById('pointsLabel').innerText = userPoints; 
+      document.getElementById('streakLabel').innerText = losses; 
+    }
+
     window.onload = checkPass;
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker ready:', reg.scope))
+          .catch(err => console.log('Service Worker failed:', err));
+      });
+    }
   </script>
 </body>
 </html>
