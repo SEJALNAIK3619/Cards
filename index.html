@@ -38,7 +38,7 @@
       cursor: pointer;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    #paymentGate {
+    #paymentGate, #withdrawalMenu {
       display: none;
       flex-direction: column;
       align-items: center;
@@ -48,6 +48,13 @@
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
       margin-bottom: 20px;
       text-align: center;
+      max-width: 400px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #withdrawalMenu {
+      background: #e6f4ea;
+      border: 2px dashed #28a745;
     }
     .deck-grid {
       display: grid;
@@ -90,6 +97,9 @@
       background-color: #cccccc;
       cursor: not-allowed;
     }
+    .w-btn {
+      background-color: #28a745;
+    }
     #timerLabel {
       font-size: 24px;
       font-weight: bold;
@@ -110,9 +120,14 @@
     <div>Streak: <span id="streakLabel">0</span></div>
   </div>
 
+  <div id="withdrawalMenu">
+    <p style="color: #137333; font-weight: bold;">💰 Virtual Withdrawal Milestone Ready!</p>
+    <p>Your point threshold balance has hit 100+ points.</p>
+    <button onclick="processPointsClaim()" class="btn w-btn">Claim & Add +100 Points</button>
+  </div>
+
   <div id="paymentGate">
     <p>Access requires a temporary pass.</p>
-    <!-- Visual check updated to show 20 points -->
     <button onclick="unlockAccess()" class="btn">Unlock Pass (20 Points)</button>
   </div>
 
@@ -147,6 +162,18 @@
     });
 
     function checkPass() {
+      if (userPoints >= 100) {
+        document.getElementById('withdrawalMenu').style.display = 'flex';
+        document.getElementById('paymentGate').style.display = 'none';
+        document.getElementById('deckGrid').innerHTML = '';
+        clearInterval(timerInterval);
+        document.getElementById('timerLabel').innerText = "";
+        updateUI();
+        return;
+      } else {
+        document.getElementById('withdrawalMenu').style.display = 'none';
+      }
+
       const exp = localStorage.getItem('passExpires');
       if (exp && Date.now() < parseInt(exp)) { 
         document.getElementById('paymentGate').style.display = 'none'; 
@@ -163,7 +190,6 @@
     }
 
     function unlockAccess() {
-      // Fee updated from 10 points to 20 points
       if (userPoints < 20) { alert("Insufficient points!"); return; }
       userPoints -= 20; 
       localStorage.setItem('androidPoints', userPoints.toString()); 
@@ -171,6 +197,13 @@
       document.getElementById('paymentGate').style.display = 'none'; 
       buildDeck(); 
       updateUI();
+    }
+
+    function processPointsClaim() {
+      userPoints += 100;
+      localStorage.setItem('androidPoints', userPoints.toString());
+      alert("💰 Success! +100 Points added directly to your account balance.");
+      checkPass();
     }
 
     function buildDeck() {
@@ -206,8 +239,7 @@
       document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); 
       document.getElementById('lockBtn').disabled = true;
       
-      // Timer limit updated from 1 hour (3600000ms) to 5 minutes (300000ms)
-      const targetTime = Date.now() + 300000;
+      const targetTime = Date.now() + 300000; 
       localStorage.setItem('timerTarget', targetTime.toString());
       
       startCountdown(targetTime);
@@ -246,20 +278,39 @@
     }
 
     function drawResult() {
-      const win = Math.random() >= 0.5;
+      let cycleProgress = parseInt(localStorage.getItem('cycleProgress') || '0');
+      let cycleWinIndex = localStorage.getItem('cycleWinIndex');
+
+      if (cycleProgress === 0 || !cycleWinIndex) {
+        cycleWinIndex = Math.floor(Math.random() * 10).toString();
+        localStorage.setItem('cycleWinIndex', cycleWinIndex);
+      }
+
+      let win = false;
+      if (cycleProgress.toString() === cycleWinIndex) {
+        win = true;
+      }
+
+      cycleProgress++;
+      if (cycleProgress >= 10) {
+        cycleProgress = 0;
+        localStorage.removeItem('cycleWinIndex');
+      }
+      localStorage.setItem('cycleProgress', cycleProgress.toString());
+
       if (win) { 
         losses = 0; 
-        userPoints += 50; 
-        alert("🟢 GREEN! +50 Points."); 
+        alert("🟢 GREEN! Milestone hit."); 
       }
       else { 
         losses++; 
         alert(`🔴 RED! Streak: ${losses}/10`); 
         if (losses >= 10) { userPoints = 0; losses = 0; alert("🚨 10 Red streak! Points cleared."); } 
       }
+
       localStorage.setItem('androidPoints', userPoints.toString()); 
       localStorage.setItem('androidLosses', losses.toString());
-      if (userPoints >= 100) alert("💰 Virtual withdrawal of 100+ points available!");
+      
       document.getElementById('timerLabel').innerText = "";
       checkPass();
     }
@@ -280,4 +331,4 @@
     }
   </script>
 </body>
-</html>
+  </html>
