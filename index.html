@@ -53,7 +53,6 @@
       user-select: none;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    /* Dynamic Red Suit Styling */
     .card-slot.red-suit {
       color: #d9534f;
     }
@@ -87,25 +86,18 @@
 </head>
 <body>
 
-  <!-- Top Info Display -->
   <div class="status-bar">
     <div>Points: <span id="pointsLabel">100</span></div>
     <div>Streak: <span id="streakLabel">0</span></div>
   </div>
 
-  <!-- Payment Gate UI Element -->
   <div id="paymentGate">
     <p>Access requires a temporary pass.</p>
     <button onclick="unlockAccess()" class="btn">Unlock Pass (10 Points)</button>
   </div>
 
-  <!-- Timer Label for Lock Countdowns -->
   <div id="timerLabel"></div>
-
-  <!-- Cards Grid View -->
   <div id="deckGrid" class="deck-grid"></div>
-
-  <!-- Selection Lock Interaction -->
   <button id="lockBtn" onclick="lockAndTimer()" class="btn" disabled>Lock Selections</button>
 
   <script>
@@ -118,7 +110,7 @@
       if (exp && Date.now() < parseInt(exp)) { 
         document.getElementById('paymentGate').style.display = 'none'; 
         buildDeck(); 
-        restoreTimer(); // Check if a countdown was already running
+        restoreTimer(); 
       }
       else { 
         document.getElementById('paymentGate').style.display = 'flex'; 
@@ -132,7 +124,11 @@
     function unlockAccess() {
       if (userPoints < 10) { alert("Insufficient points!"); return; }
       userPoints -= 10; 
+      
+      // Save state to fix the refresh bug
+      localStorage.setItem('androidPoints', userPoints.toString()); 
       localStorage.setItem('passExpires', (Date.now() + 172800000).toString());
+      
       document.getElementById('paymentGate').style.display = 'none'; 
       buildDeck(); 
       updateUI();
@@ -149,7 +145,6 @@
         for (let v = 1; v <= 13; v++) {
           const slot = document.createElement('div'); 
           slot.className = 'card-slot'; 
-          // Highlight hearts and diamonds in red
           if (suit === '♥️' || suit === '♦️') {
             slot.classList.add('red-suit');
           }
@@ -172,7 +167,6 @@
       document.querySelectorAll('.card-slot').forEach(s => s.onclick = null); 
       document.getElementById('lockBtn').disabled = true;
       
-      // Persist the target time 1 hour into the future
       const targetTime = Date.now() + 3600000;
       localStorage.setItem('timerTarget', targetTime.toString());
       
@@ -202,7 +196,6 @@
       if (savedTarget) {
         const targetTime = parseInt(savedTarget);
         if (Date.now() < targetTime) {
-          // Lock down the grid options immediately if timer is active
           document.querySelectorAll('.card-slot').forEach(s => s.onclick = null);
           document.getElementById('lockBtn').disabled = true;
           startCountdown(targetTime);
